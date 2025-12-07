@@ -166,6 +166,3 @@ Add docs for staging/production environments, secret rotation, backups
 Oladotun — DevOps Engineer
 GitHub: Maverick1711
 
-
-Oladotun — DevOps Engineer
-GitHub: Maverick1711
