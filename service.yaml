@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: dev-shopwise-eks-service    # Update as needed
+  namespace: dev-shopwise-eks-namespace    # Update as needed, must match Deployment metadata.namespace
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-internal: "false"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:us-east-1:521725812311:certificate/2822fcf1-d8e0-49c8-90ac-1ad6674f8235"    # Update as needed with your ACM certificate ARN
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+spec:
+  type: LoadBalancer
+  ports:
+    - name: https
+      port: 443
+      targetPort: 80    # Update as needed, must match Deployment ports.containerPort
+      protocol: TCP
+  selector:
+    app: shopwise-app    # Update as needed, must match Deployment metadata.labels.app and spec.selector.matchLabels.app

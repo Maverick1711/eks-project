@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dev-shopwise-eks-deployment
+  namespace: dev-shopwise-eks-namespace
+  labels:
+    app: shopwise-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shopwise-app
+  template:
+    metadata:
+      labels:
+        app: shopwise-app
+    spec:
+      serviceAccountName: dev-shopwise-eks-service-account
+      volumes:
+      - name: secrets-store-inline
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: dev-shopwise-eks-secret-provider-class
+
+      containers:
+      - name: dev-shopwise-eks-container
+        image: 521725812311.dkr.ecr.us-east-1.amazonaws.com/shopwise-repo:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+
+        # -----------------------------
+        # ADD ENV VARIABLES HERE
+        # -----------------------------
+        env:
+          - name: DB_HOST
+            value: "dev-shopwise-db.c4ricmeue4zk.us-east-1.rds.amazonaws.com"
+
+          - name: DB_HOST
+            value: "admin"
+
+          - name: DB_DATABASE
+            value: "applicationdb"
+
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: dev-shopwise-app-secret
+                key: password
+
+        volumeMounts:
+        - name: secrets-store-inline
+          mountPath: "/mnt/secrets-store"
+          readOnly: true
+
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
