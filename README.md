@@ -1,106 +1,131 @@
-Shopwise App Kubernetes Deployment
+Shopwise APP on AWS EKS
 
-Project Overview
-
-This repository contains the deployment and infrastructure setup for the Shopwise web application on AWS Elastic Kubernetes Service (EKS).
-
-The project demonstrates professional DevOps practices, including:
-
-Containerization with Docker
-
-Kubernetes deployments and service configuration
-
-Secrets management using AWS Secrets Manager
-
-Database migrations using Flyway
-
-CI/CD readiness and cloud-native deployment
-
-This setup ensures scalability, security, and maintainability for dynamic web applications.
+A full‑stack, containerized web application deployed on AWS EKS, with MySQL on RDS and secure credential handling via AWS Secrets Manager.
 
 
-Key Features
+🚀 Project Overview
 
-Containerized App: Dockerfile included for application image build.
+This repository contains the infrastructure, deployment manifests, and automation scripts to run the Shopwise web application on AWS EKS (Kubernetes). It demonstrates a real‑world DevOps workflow including:
 
-Kubernetes Deployment: Deployment and Service manifests ready for EKS.
+Dockerization of the application
 
-Secrets Management: Database credentials securely injected via SecretProviderClass.
+Kubernetes Deployment + Service configuration
 
-Database Migrations: Flyway integrated to automate MySQL setup.
+Secure secret management via AWS Secrets Manager + CSI driver
 
-Resource Management: CPU and memory limits set to prevent noisy neighbor issues.
+MySQL database on AWS RDS
+
+Infrastructure-as-code readiness (for CI/CD pipelines)
+
+The goal: provide a reproducible, scalable, and secure deployment environment for a dynamic web app — ideal for production or staging.
 
 
 
-AWS Integration: Full support for EKS, RDS, and ECR.
-
-Repository Structure
+📂 Repository Structure
 eks-project/
 ├── deployment.yaml           # Kubernetes Deployment manifest
 ├── service.yaml              # Kubernetes Service manifest
 ├── secret-provider.yaml      # SecretProviderClass for AWS Secrets Manager
-├── Dockerfile                # Docker configuration for app
-├── build-image.sh            # Script to build Docker image
-├── push-image.sh             # Script to push Docker image to ECR
-├── db-migrate-script.sh      # Script to migrate database
-├── README.md                 # Project documentation
+├── Dockerfile                # Docker config for application image
+├── build-image.sh            # Build Docker image script
+├── push-image.sh             # Push Docker image to AWS ECR script
+├── db-migrate-script.sh      # Script to run DB migrations
+├── README.md                 # Project documentation (this file)
 └── .gitignore
 
 
+Note: Adjust names if your files differ (e.g. service.yaml maybe named differently in your project).
 
-Prerequisites
+🛠️ Prerequisites
 
-AWS account with EKS cluster, RDS MySQL, ECR repo, and Secrets Manager secret
+Before deploying, make sure you have:
 
-kubectl configured for the target EKS cluster
+An AWS account with:
 
-AWS CLI installed and configured
+EKS cluster configured
 
-Docker installed
+RDS MySQL instance (database)
 
-Flyway for database migrations
+ECR repository for Docker images
 
-Setup & Deployment
-1️⃣ Build & Push Docker Image
+AWS Secrets Manager secret storing DB credentials
+
+The following tools installed locally or in a CI environment:
+
+kubectl (configured to target the EKS cluster)
+
+AWS CLI (configured with correct IAM permissions)
+
+Docker
+
+(Optional) Flyway — if using database migration scripts
+
+
+📦 Deployment Workflow
+1. Build & Push Docker Image
 chmod +x build-image.sh push-image.sh
 ./build-image.sh
 ./push-image.sh
 
-2️⃣ Deploy to Kubernetes
+
+This builds your application’s Docker image and pushes it to your ECR repository.
+
+2. Deploy Kubernetes Resources
 kubectl apply -f secret-provider.yaml -n <namespace>
 kubectl apply -f deployment.yaml -n <namespace>
 kubectl apply -f service.yaml -n <namespace>
 
-3️⃣ Verify Deployment
-kubectl get pods -n <namespace>
-kubectl get svc -n <namespace>
-kubectl logs -f <pod-name> -n <namespace>
 
-4️⃣ Database Migrations
-kubectl exec -it <pod-name> -n <namespace> -- ./db-migrate-script.sh
+Replace <namespace> with your intended namespace. This:
 
-5️⃣ Access the Application
+Deploys the application container to EKS
 
-Via AWS Load Balancer DNS
+Configures the Service (LoadBalancer / NodePort) for external access
 
-Or locally using port-forward:
+Mounts secrets securely from AWS Secrets Manager
 
-kubectl port-forward svc/<service-name> 8080:<target-port> -n <namespace>
+3. Run Database Migrations
+
+If you include migration scripts:
+
+kubectl exec -it <pod-name> -n <namespace> -- /app/db-migrate-script.sh
 
 
-Visit http://localhost:8080 in your browser
+Or set up your CI/CD to run migrations automatically after deployment.
 
-Environment Variables
-Variable	Description
-RDS_ENDPOINT	MySQL RDS endpoint
-RDS_DB_NAME	Database name
-RDS_DB_USERNAME	Database username
-DB_PASSWORD	DB password (from Secrets Manager)
-S3_URI	Location of migration SQL scripts
-FLYWAY_VERSION	Flyway CLI version
-AWS_REGION	AWS region
-Resource Management
+4. Access the Application
+
+Once the Load Balancer is provisioned and healthy, visit your domain or LB DNS in the browser.
+For local testing, you can forward the service port:
+
+kubectl port-forward svc/<service-name> 8080:<service-port> -n <namespace>
+
+
+Then open http://localhost:8080.
+
+🔐 Configuration & Secrets
+
+Core configuration and credentials (e.g. DB password) are not hard-coded. They are stored in AWS Secrets Manager and mounted into Kubernetes via the SecretProviderClass.
+
+You must ensure:
+
+Secrets exist in AWS Secrets Manager
+
+The secret-provider.yaml references the correct Secret ARN
+
+The Kubernetes ServiceAccount used by the pod has the necessary IAM permissions
+
+Environment variables passed to the application container typically include:
+
+DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD, ...
+
+
+Ensure these match your RDS configuration.
+
+🔧 Kubernetes Resource Limits
+
+Resources are constrained in the Deployment manifest to avoid misuse and ensure cluster stability:
+
 resources:
   requests:
     cpu: "200m"
@@ -110,31 +135,37 @@ resources:
     memory: "512Mi"
 
 
-Ensures cluster stability and efficient scheduling.
+Feel free to tune these values to match your workload.
+
+✅ Why This Setup
+
+Production‑ready: Uses managed services (EKS + RDS + Secrets Manager), suitable for real workloads
+
+Secure: Secrets are never exposed in code or config — they live securely in AWS Secrets Manager
+
+Scalable & Maintainable: Docker + Kubernetes + Infrastructure as Code patterns make it easy to scale, version, and automate deployments
+
+Clean Separation: Database, application code, infrastructure, and secrets are cleanly separated — following best practices
 
 
-Security
+📈 Next Steps / Improvements
 
-AWS IAM service account with least privilege
+Add a CI/CD pipeline (GitHub Actions, Jenkins, or AWS CodePipeline) to automate builds, tests, deployments
 
-Secrets injected via SecretProviderClass
+Add horizontal pod autoscaling for dynamic load handling
 
-Docker images pulled securely from AWS ECR
+Integrate logging/monitoring (e.g. Prometheus/Grafana, AWS CloudWatch)
 
+Add a Helm chart for easier deployment/configuration management
 
-Future Improvements
-
-Implement CI/CD pipeline (Jenkins/GitHub Actions)
-
-Horizontal pod autoscaling
-
-Monitoring with CloudWatch or Prometheus/Grafana
+Add docs for staging/production environments, secret rotation, backups
 
 
-Author
+👤 Author / Maintainer
 
-Oladotun David O – DevOps Engineer
+Oladotun — DevOps Engineer
+GitHub: Maverick1711
 
-GitHub: https://github.com/Maverick1711
 
-Skills: AWS EKS, Kubernetes, Docker, Terraform, CI/CD, Secrets Management
+Oladotun — DevOps Engineer
+GitHub: Maverick1711
